@@ -1,11 +1,17 @@
 'use client'
 
+import { Search } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { buscarLote, type LoteResult } from './actions'
-import { Search } from 'lucide-react'
 
 export default function BuscaPage() {
   const [termo, setTermo] = useState('')
@@ -75,24 +81,32 @@ export default function BuscaPage() {
                       <strong>Descrição:</strong>
                       <p className="text-sm mt-1">{item.descricao}</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       <div>
-                        <p className="text-sm text-muted-foreground">Valor (Catálogo)</p>
+                        <p className="text-sm text-muted-foreground">
+                          Valor (Catálogo)
+                        </p>
                         <p className="font-semibold">{item.valor}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Total (Relatório)</p>
+                        <p className="text-sm text-muted-foreground">
+                          Total (Relatório)
+                        </p>
                         <p className="font-semibold">{item.total}</p>
                       </div>
                       {item.peso && (
                         <>
                           <div>
-                            <p className="text-sm text-muted-foreground">Peso</p>
+                            <p className="text-sm text-muted-foreground">
+                              Peso
+                            </p>
                             <p className="font-semibold">{item.peso}</p>
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">Valor por Grama</p>
+                            <p className="text-sm text-muted-foreground">
+                              Valor por Grama
+                            </p>
                             <p className="font-semibold text-primary">
                               {item.valorPorGrama || 'N/A'}
                             </p>
@@ -104,7 +118,9 @@ export default function BuscaPage() {
                     {item.anotacoes && (
                       <div className="pt-2">
                         <strong className="text-sm">Anotações:</strong>
-                        <p className="text-sm text-muted-foreground mt-1">{item.anotacoes}</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {item.anotacoes}
+                        </p>
                       </div>
                     )}
                   </CardContent>

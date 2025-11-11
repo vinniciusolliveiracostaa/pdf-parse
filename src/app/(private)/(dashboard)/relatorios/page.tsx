@@ -27,7 +27,7 @@ export default async function RelatoriosPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <Card className="max-w-7xl mx-auto">
+      <Card className="w-9/10 mx-auto">
         <CardHeader>
           <CardTitle>Dados dos Relatórios</CardTitle>
           <CardDescription>

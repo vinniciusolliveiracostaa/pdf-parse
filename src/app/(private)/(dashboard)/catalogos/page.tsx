@@ -28,7 +28,7 @@ export default async function CatalogosPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <Card className="max-w-7xl mx-auto">
+      <Card className="max-w-9/10 mx-auto">
         <CardHeader>
           <CardTitle>Dados dos Catálogos</CardTitle>
           <CardDescription>
@@ -51,6 +51,7 @@ export default async function CatalogosPage() {
                       <th className="text-left p-2">Contrato</th>
                       <th className="text-left p-2">Descrição</th>
                       <th className="text-left p-2">Valor</th>
+                      <th className="text-left p-2">Anotações</th>
                       <th className="text-left p-2">Peso</th>
                     </tr>
                   </thead>
@@ -75,6 +76,9 @@ export default async function CatalogosPage() {
                           {item.descricao}
                         </td>
                         <td className="p-2">R$ {item.valor}</td>
+                        <td className="p-2 max-w-xs truncate">
+                          {item.anotacoes || '-'}
+                        </td>
                         <td className="p-2">{item.peso || '-'}</td>
                       </tr>
                     ))}
