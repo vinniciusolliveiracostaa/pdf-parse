@@ -1,5 +1,4 @@
 'use server'
-
 import { uuidv7 } from 'uuidv7'
 import { db } from '@/db/drizzle'
 import { leilao } from '@/db/schema/leiloes'
@@ -19,59 +18,66 @@ export async function uploadPdfs(formData: FormData) {
     const relatorioPdf = formData.get('relatorio') as File
     const dataLicitacao = formData.get('dataLicitacao') as string
 
+    // 1. Validação simples e concisa
     if (!catalogoPdf || !relatorioPdf || !dataLicitacao) {
       return { success: false, error: 'Todos os campos são obrigatórios' }
     }
 
-    // Converte Files para Buffer
-    const catalogoBuffer = Buffer.from(await catalogoPdf.arrayBuffer())
-    const relatorioBuffer = Buffer.from(await relatorioPdf.arrayBuffer())
+    // 2. Converção e Extração de Texto em Paralelo
+    const catalogoBufferPromise = catalogoPdf.arrayBuffer().then(Buffer.from)
+    const relatorioBufferPromise = relatorioPdf.arrayBuffer().then(Buffer.from)
 
-    console.log('📄 Extraindo texto do catálogo...')
-    const catalogoText = await extractTextFromPDF(catalogoBuffer)
+    const [catalogoBuffer, relatorioBuffer] = await Promise.all([
+      catalogoBufferPromise,
+      relatorioBufferPromise,
+    ])
 
-    console.log('📄 Extraindo texto do relatório...')
-    const relatorioText = await extractTextFromPDF(relatorioBuffer)
+    const [catalogoText, relatorioText] = await Promise.all([
+      extractTextFromPDF(catalogoBuffer),
+      extractTextFromPDF(relatorioBuffer),
+    ])
 
-    console.log('🔍 Parsing do catálogo...')
-    const catalogoItems = parseCatalogo(catalogoText)
+    if (relatorioText.length < 50) {
+      return {
+        success: false,
+        error: 'Falha na extração de texto do relatório.',
+      }
+    }
 
-    console.log('🔍 Parsing do relatório...')
-    const relatorioItems = parseRelatorio(relatorioText)
+    // 3. Parsing em Paralelo
+    const [catalogoItems, relatorioItems] = await Promise.all([
+      parseCatalogo(catalogoText),
+      parseRelatorio(relatorioText),
+    ])
 
     if (catalogoItems.length === 0) {
       return {
         success: false,
-        error: 'Não foi possível extrair dados do catálogo',
+        error: 'Não foi possível extrair lotes do catálogo',
       }
     }
 
     if (relatorioItems.length === 0) {
       return {
         success: false,
-        error: 'Não foi possível extrair dados do relatório',
+        error: 'Não foi possível extrair arrematações do relatório',
       }
     }
 
-    console.log(`✅ Catálogo: ${catalogoItems.length} lotes encontrados`)
-    console.log(
-      `✅ Relatório: ${relatorioItems.length} arrematações encontradas`,
-    )
-
-    // Cria o leilão
+    // 4. Inserção no Banco de Dados
     const leilaoId = uuidv7()
+
+    // Insere o leilão
     await db.insert(leilao).values({
       id: leilaoId,
       dataLicitacao: dataLicitacao,
     })
 
-    console.log('💾 Salvando catálogo no banco...')
-    const catalogoCount = await saveCatalogoToDb(leilaoId, catalogoItems)
-
-    console.log('💾 Salvando relatório no banco...')
-    const relatorioCount = await saveRelatorioToDb(leilaoId, relatorioItems)
-
-    console.log('🎉 Upload concluído com sucesso!')
+    // Salvando dados do catálogo e relatório em paralelo
+    const [catalogoCount, relatorioCount] = await Promise.all([
+      saveCatalogoToDb(leilaoId, catalogoItems),
+      saveRelatorioToDb(leilaoId, relatorioItems),
+    ])
 
     return {
       success: true,
@@ -82,10 +88,12 @@ export async function uploadPdfs(formData: FormData) {
       },
     }
   } catch (error) {
-    console.error('❌ Erro ao processar PDFs:', error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Erro desconhecido ao processar arquivos.',
     }
   }
 }

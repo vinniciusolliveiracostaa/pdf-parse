@@ -1,7 +1,13 @@
-import { db } from '@/db/drizzle'
-import { relatorio, leilao } from '@/db/schema/leiloes'
 import { desc, eq } from 'drizzle-orm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { db } from '@/db/drizzle'
+import { leilao, relatorio } from '@/db/schema/leiloes'
 
 export default async function RelatoriosPage() {
   const relatorios = await db
@@ -31,7 +37,9 @@ export default async function RelatoriosPage() {
         <CardContent>
           <div className="space-y-4">
             {relatorios.length === 0 ? (
-              <p className="text-muted-foreground">Nenhum relatório importado ainda</p>
+              <p className="text-muted-foreground">
+                Nenhum relatório importado ainda
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -49,16 +57,19 @@ export default async function RelatoriosPage() {
                     {relatorios.map((item) => (
                       <tr key={item.id} className="border-b hover:bg-muted/50">
                         <td className="p-2">
-                          {item.dataLicitacao ? 
-                            new Date(item.dataLicitacao).toLocaleDateString('pt-BR') : 
-                            'N/A'
-                          }
+                          {item.dataLicitacao
+                            ? new Date(item.dataLicitacao).toLocaleDateString(
+                                'pt-BR',
+                              )
+                            : 'N/A'}
                         </td>
-                        <td className="p-2 font-mono text-xs">{item.cpfCnpj || '-'}</td>
+                        <td className="p-2 font-mono text-xs">
+                          {item.cpfCnpj || '-'}
+                        </td>
                         <td className="p-2 font-mono">{item.numeroLote}</td>
-                        <td className="p-2">{item.valorLance}</td>
-                        <td className="p-2">{item.tarifa}</td>
-                        <td className="p-2 font-semibold">{item.total}</td>
+                        <td className="p-2">R$ {item.valorLance}</td>
+                        <td className="p-2">R$ {item.tarifa}</td>
+                        <td className="p-2 font-semibold">R$ {item.total}</td>
                       </tr>
                     ))}
                   </tbody>

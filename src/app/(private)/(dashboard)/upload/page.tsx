@@ -1,13 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { uploadPdfs } from './actions'
-import { toast } from 'sonner'
 
 export default function UploadPage() {
   const [loading, setLoading] = useState(false)
@@ -21,7 +27,9 @@ export default function UploadPage() {
     const result = await uploadPdfs(formData)
 
     if (result.success) {
-      toast.success(`PDFs processados com sucesso! Catálogo: ${result.data?.catalogoCount} itens, Relatório: ${result.data?.relatorioCount} registros`)
+      toast.success(
+        `PDFs processados com sucesso! Catálogo: ${result.data?.catalogoCount} itens, Relatório: ${result.data?.relatorioCount} registros`,
+      )
       router.push('/')
     } else {
       toast.error(result.error || 'Erro ao processar PDFs')
@@ -36,7 +44,8 @@ export default function UploadPage() {
         <CardHeader>
           <CardTitle>Upload de PDFs do Leilão</CardTitle>
           <CardDescription>
-            Faça upload do catálogo e relatório de arrematantes para processar os dados
+            Faça upload do catálogo e relatório de arrematantes para processar
+            os dados
           </CardDescription>
         </CardHeader>
         <CardContent>

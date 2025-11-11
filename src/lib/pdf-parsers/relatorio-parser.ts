@@ -18,7 +18,7 @@ function formatCpfCnpj(cpfCnpj: string): string {
 }
 
 /**
- * Parser linha por linha para relatório
+ * Parser 1: Linha por linha para relatório (Fallback)
  */
 function parseRelatorioContent(rawText: string): RelatorioData[] {
   const allData: RelatorioData[] = []
@@ -38,6 +38,7 @@ function parseRelatorioContent(rawText: string): RelatorioData[] {
     .map((l) => l.trim())
     .filter((l) => l.length > 0)
 
+  // Esta Regex é usada pelo Parser 1 e não foi a fonte do problema atual
   const cpfCnpjPattern =
     /^\d{3}\.\d{3}\.XXX-\d{2}$|^\d{3}\.\d{2}X\.XXX-\d{2}$|^\d{2}\.\d{3}\.XXX\/\d{4}-\d{2}$/
   const lotePattern = /^\d{4}\.\d{6}-\d$/
@@ -80,54 +81,96 @@ function parseRelatorioContent(rawText: string): RelatorioData[] {
 }
 
 /**
- * Parser alternativo usando regex
+ * Parser 2: Alternativo usando regex (Com correção de índice e debug)
  */
 function parseRelatorioContentRegex(rawText: string): RelatorioData[] {
+  console.log('--- INÍCIO DEBUG: parseRelatorioContentRegex ---')
   const allData: RelatorioData[] = []
+  let content = rawText
 
-  const content = rawText
-    .replace(/CAIXA ECONÔMICA FEDERAL[\s\S]*?Total/m, '')
-    .replace(/Alô CAIXA:[\s\S]*$/g, '')
+  // 1. Normalização de quebra de linha
+  content = content.replace(/\r\n|\r/g, '\n')
 
+  // PADRÕES DE CPF/CNPJ CORRIGIDOS NOVAMENTE: Mais flexível para lidar com 'X's no meio.
   const cpfCnpjPattern =
-    /(\d{3}\.\d{3}\.XXX-\d{2}|\d{3}\.\d{2}X\.XXX-\d{2}|\d{2}\.\d{3}\.XXX\/\d{4}-\d{2})/g
+    /(\d{2,3}\.[\dX]{1,3}\.[\dX]{1,3}[-./][\dX]{1,4}-\d{2})/g
+  const cpfCnpjValidator =
+    /\d{2,3}\.[\dX]{1,3}\.[\dX]{1,3}[-./][\dX]{1,4}-\d{2}/
+
+  // 2. Tenta encontrar a posição do primeiro CPF/CNPJ no texto
+  const firstCpfCnpjMatch = content.match(cpfCnpjPattern)
+  console.log(
+    '1. Match do Primeiro CPF/CNPJ:',
+    firstCpfCnpjMatch ? firstCpfCnpjMatch[0] : 'NÃO ENCONTRADO',
+  )
+
+  // CORREÇÃO: Força o uso do index com '!' (Corrigido na rodada anterior)
+  if (firstCpfCnpjMatch) {
+    content = content.substring(firstCpfCnpjMatch.index!)
+    console.log(
+      '2. Content limpo (substring) OK. Início: ',
+      `${content.substring(0, 50).replace(/\n/g, '\\n')}...`,
+    )
+  } else {
+    console.log(
+      '2. Falha ao encontrar CPF/CNPJ (Index não disponível). Retornando 0 registros.',
+    )
+    return allData
+  }
+
+  // 3. Limpeza de Totais e Rodapés
+  content = content
+    .replace(/Matrícula:.*?Data da Licitação:.*?\d+\/\d+\/\d+/g, '') // Remove cabeçalhos residuais
+    .replace(/Alô CAIXA:[\s\S]*$/g, '') // Remove rodapé
+    .replace(/\(\d+\)[\s\d.,]*Total/g, '') // Remove linhas de Total
+
+  // Regex de dados colados (super flexível)
+  const dataGluedRegex = new RegExp(
+    '(\\d{4}\\.\\d{6}-\\d)' + // Grupo 1: Lote
+      '([\\d\\.]+,\\d{2})' + // Grupo 2: Lance (e.g., 3.090,00)
+      '([\\d\\.]+,\\d{2})' + // Grupo 3: Tarifa (e.g., 185,40)
+      '([\\d\\.]+,\\d{2})', // Grupo 4: Total (e.g., 3.275,40)
+    'i',
+  )
+
+  // Divide o texto em blocos APENAS pelos CPF/CNPJ VÁLIDOS
   const blocks = content
     .split(cpfCnpjPattern)
     .filter((b) => b.trim().length > 0)
+  console.log('3. Total de blocos (CPFs + Dados):', blocks.length)
 
   let currentCpfCnpj = ''
 
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i].trim()
+  for (const block of blocks) {
+    const trimmedBlock = block.trim()
 
-    if (
-      /^\d{3}\.\d{3}\.XXX-\d{2}$|^\d{3}\.\d{2}X\.XXX-\d{2}$|^\d{2}\.\d{3}\.XXX\/\d{4}-\d{2}$/.test(
-        block,
-      )
-    ) {
-      currentCpfCnpj = formatCpfCnpj(block)
+    // Este if agora deve ser executado APENAS para o CPF/CNPJ
+    if (cpfCnpjValidator.test(trimmedBlock)) {
+      currentCpfCnpj = formatCpfCnpj(trimmedBlock)
+      console.log(`4. Novo Arrematante: ${currentCpfCnpj}`)
       continue
     }
 
     if (currentCpfCnpj) {
-      const lines = block
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0)
+      console.log(
+        `5. Processando bloco de dados para ${currentCpfCnpj}. Tamanho do bloco: ${trimmedBlock.length}`,
+      )
+
+      const lines = trimmedBlock.split('\n').filter((l) => l.trim().length > 0)
+      console.log(`5a. Total de linhas no bloco: ${lines.length}`)
 
       for (const line of lines) {
+        // Ignora lixo ou cabeçalhos residuais
         if (
-          line.includes('Total') ||
           line.includes('Matrícula') ||
           line.includes('Data da Licitação') ||
+          line.includes('Total') ||
           line.length < 10
         ) {
           continue
         }
 
-        const match = line.match(
-          /^(\d{4}\.\d{6}-\d)\s+([\d.,]+)\s+([\d.,]+)\s+([\d.,]+)/,
-        )
+        const match = line.match(dataGluedRegex)
 
         if (match) {
           allData.push({
@@ -137,10 +180,19 @@ function parseRelatorioContentRegex(rawText: string): RelatorioData[] {
             TARIFA: match[3],
             TOTAL: match[4],
           })
+          console.log(
+            `✅ 6. Match SUCESSO! Lote: ${match[1]}, Total de Registros: ${allData.length}`,
+          )
+        } else {
+          // DEBUG: Se falhar, vamos ver qual linha falhou
+          console.log(
+            `❌ 6. Match FALHOU na linha: "${line.substring(0, 60).replace(/\n/g, '\\n')}..."`,
+          )
         }
       }
     }
   }
+  console.log('--- FIM DEBUG: Total de Registros Encontrados:', allData.length)
 
   return allData
 }

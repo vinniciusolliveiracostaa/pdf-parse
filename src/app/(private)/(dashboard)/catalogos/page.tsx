@@ -1,7 +1,13 @@
+import { desc, eq } from 'drizzle-orm'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { db } from '@/db/drizzle'
 import { catalogo, leilao } from '@/db/schema/leiloes'
-import { desc, eq } from 'drizzle-orm'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default async function CatalogosPage() {
   const catalogos = await db
@@ -32,7 +38,9 @@ export default async function CatalogosPage() {
         <CardContent>
           <div className="space-y-4">
             {catalogos.length === 0 ? (
-              <p className="text-muted-foreground">Nenhum catálogo importado ainda</p>
+              <p className="text-muted-foreground">
+                Nenhum catálogo importado ainda
+              </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -50,17 +58,23 @@ export default async function CatalogosPage() {
                     {catalogos.map((item) => (
                       <tr key={item.id} className="border-b hover:bg-muted/50">
                         <td className="p-2">
-                          {item.dataLicitacao ? 
-                            new Date(item.dataLicitacao).toLocaleDateString('pt-BR') : 
-                            'N/A'
-                          }
+                          {item.dataLicitacao
+                            ? new Date(item.dataLicitacao).toLocaleDateString(
+                                'pt-BR',
+                              )
+                            : 'N/A'}
                         </td>
                         <td className="p-2 font-mono">{item.lote}</td>
-                        <td className="p-2 font-mono text-xs">{item.contrato}</td>
-                        <td className="p-2 max-w-md truncate" title={item.descricao}>
+                        <td className="p-2 font-mono text-xs">
+                          {item.contrato}
+                        </td>
+                        <td
+                          className="p-2 max-w-md truncate"
+                          title={item.descricao}
+                        >
                           {item.descricao}
                         </td>
-                        <td className="p-2">{item.valor}</td>
+                        <td className="p-2">R$ {item.valor}</td>
                         <td className="p-2">{item.peso || '-'}</td>
                       </tr>
                     ))}
