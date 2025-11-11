@@ -97,3 +97,49 @@ export async function uploadPdfs(formData: FormData) {
     }
   }
 }
+
+export async function deleteLeilao(leilaoId: string) {
+  const { eq } = await import('drizzle-orm')
+  const { headers } = await import('next/headers')
+  const { auth } = await import('@/lib/auth')
+  const { account } = await import('@/db/schema/accounts')
+  const { catalogo, relatorio } = await import('@/db/schema/leiloes')
+  const { cache } = await import('@/lib/cache')
+
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    })
+
+    if (!session) {
+      return { success: false, error: 'Não autenticado' }
+    }
+
+    const [userAccount] = await db
+      .select()
+      .from(account)
+      .where(eq(account.userId, session.user.id))
+      .limit(1)
+
+    if (!userAccount || userAccount.role !== 'ADMIN') {
+      return {
+        success: false,
+        error: 'Permissão negada. Apenas admins podem excluir leilões.',
+      }
+    }
+
+    await db.delete(catalogo).where(eq(catalogo.leilaoId, leilaoId))
+    await db.delete(relatorio).where(eq(relatorio.leilaoId, leilaoId))
+    await db.delete(leilao).where(eq(leilao.id, leilaoId))
+
+    await cache.delPattern('leiloes:*')
+    await cache.delPattern('catalogos:*')
+    await cache.delPattern('relatorios:*')
+    await cache.del('stats:dashboard')
+
+    return { success: true }
+  } catch (error) {
+    console.error('Erro ao deletar leilão:', error)
+    return { success: false, error: 'Erro ao excluir leilão' }
+  }
+}

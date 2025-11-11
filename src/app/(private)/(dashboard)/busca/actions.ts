@@ -1,8 +1,8 @@
 'use server'
 
+import { eq, like, or } from 'drizzle-orm'
 import { db } from '@/db/drizzle'
 import { catalogo, relatorio } from '@/db/schema/leiloes'
-import { eq, or, like } from 'drizzle-orm'
 
 export interface LoteResult {
   lote: string
@@ -19,7 +19,9 @@ export interface LoteResult {
  * Converte valor em formato brasileiro para número
  */
 function parseValor(valor: string): number {
-  return parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim())
+  return parseFloat(
+    valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim(),
+  )
 }
 
 /**
@@ -39,7 +41,10 @@ function formatMoeda(valor: number): string {
 export async function buscarLote(termo: string) {
   try {
     if (!termo || termo.trim().length < 3) {
-      return { success: false, error: 'Digite pelo menos 3 caracteres para buscar' }
+      return {
+        success: false,
+        error: 'Digite pelo menos 3 caracteres para buscar',
+      }
     }
 
     // Busca no catálogo por número do lote ou descrição
@@ -49,8 +54,8 @@ export async function buscarLote(termo: string) {
       .where(
         or(
           like(catalogo.lote, `%${termo}%`),
-          like(catalogo.descricao, `%${termo}%`)
-        )
+          like(catalogo.descricao, `%${termo}%`),
+        ),
       )
       .limit(50)
 

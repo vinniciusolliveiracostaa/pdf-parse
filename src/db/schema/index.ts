@@ -1,8 +1,9 @@
-import { session } from './sessions';
-import { account } from './accounts';
-import { user } from './users';
-import { verification } from './verifications';
-import { leilao, catalogo, relatorio } from './leiloes';
+import { account } from './accounts'
+import { catalogo, leilao, relatorio } from './leiloes'
+import { session } from './sessions'
+import { settings } from './settings'
+import { user } from './users'
+import { verification } from './verifications'
 
 export const schema = {
   account,
@@ -12,4 +13,5 @@ export const schema = {
   leilao,
   catalogo,
   relatorio,
-};
+  settings,
+}

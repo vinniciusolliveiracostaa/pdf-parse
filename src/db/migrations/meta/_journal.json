@@ -15,6 +15,13 @@
       "when": 1762843549331,
       "tag": "0001_wise_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762883175848,
+      "tag": "0002_green_pestilence",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,7 @@ export function LoginForm({
         password,
       })
       router.push('/')
-    } catch (err) {
+    } catch (_err) {
       setError('Invalid email or password')
     } finally {
       setLoading(false)

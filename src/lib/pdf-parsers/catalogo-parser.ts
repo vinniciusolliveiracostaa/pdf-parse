@@ -16,7 +16,7 @@ export interface CatalogoData {
  * Busca padrão: X,XXG (sempre duas casas decimais antes do G)
  */
 export function extractPeso(descricao: string): string | undefined {
-  const pesoMatch = descricao.match(/(\d+,\d{2})\s*G/i) 
+  const pesoMatch = descricao.match(/(\d+,\d{2})\s*G/i)
   return pesoMatch ? `${pesoMatch[1]}G` : undefined
 }
 

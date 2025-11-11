@@ -1,4 +1,7 @@
-import { desc, eq } from 'drizzle-orm'
+import { count, desc, eq, sql } from 'drizzle-orm'
+
+import { DataTable } from '@/components/data-table'
+import { SectionCards, type StatCard } from '@/components/section-cards'
 import {
   Card,
   CardContent,
@@ -8,8 +11,29 @@ import {
 } from '@/components/ui/card'
 import { db } from '@/db/drizzle'
 import { catalogo, leilao } from '@/db/schema/leiloes'
+import { columns } from './columns'
 
-export default async function CatalogosPage() {
+function parseValor(valor: string): number {
+  return parseFloat(
+    valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim(),
+  )
+}
+
+interface CatalogosPageProps {
+  searchParams: Promise<{
+    page?: string
+    pageSize?: string
+  }>
+}
+
+export default async function CatalogosPage({
+  searchParams,
+}: CatalogosPageProps) {
+  const params = await searchParams
+  const page = Number(params.page) || 1
+  const pageSize = Number(params.pageSize) || 10
+  const offset = (page - 1) * pageSize
+
   const catalogos = await db
     .select({
       id: catalogo.id,
@@ -24,69 +48,85 @@ export default async function CatalogosPage() {
     .from(catalogo)
     .leftJoin(leilao, eq(catalogo.leilaoId, leilao.id))
     .orderBy(desc(catalogo.createdAt))
-    .limit(100)
+    .limit(pageSize)
+    .offset(offset)
+
+  const [totalCount] = await db.select({ count: count() }).from(catalogo)
+
+  const [comPesoCount] = await db
+    .select({ count: count() })
+    .from(catalogo)
+    .where(sql`${catalogo.peso} IS NOT NULL`)
+
+  const valorTotal = catalogos.reduce((acc, item) => {
+    return acc + parseValor(item.valor)
+  }, 0)
+
+  const valorMedio = totalCount.count > 0 ? valorTotal / totalCount.count : 0
+
+  const cards: StatCard[] = [
+    {
+      title: 'Total de Lotes',
+      value: totalCount.count.toLocaleString('pt-BR'),
+      description: 'Total de Lotes',
+      footer: {
+        label: 'Catálogos importados',
+        description: 'Itens disponíveis no sistema',
+      },
+    },
+    {
+      title: 'Valor Total',
+      value: valorTotal.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+      description: 'Valor Total',
+      footer: {
+        label: 'Soma de todos os lotes',
+        description: 'Valor acumulado dos catálogos',
+      },
+    },
+    {
+      title: 'Com Peso',
+      value: comPesoCount.count.toLocaleString('pt-BR'),
+      description: 'Com Peso',
+      footer: {
+        label: 'Itens com peso identificado',
+        description: 'Permite cálculo de R$/g',
+      },
+    },
+    {
+      title: 'Valor Médio',
+      value: valorMedio.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }),
+      description: 'Valor Médio',
+      footer: {
+        label: 'Média por lote',
+        description: 'Valor médio dos catálogos',
+      },
+    },
+  ]
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <Card className="max-w-9/10 mx-auto">
-        <CardHeader>
+    <div className="@container/main flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-0">
+      <div className="shrink-0">
+        <SectionCards cards={cards} />
+      </div>
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <CardHeader className="shrink-0">
           <CardTitle>Dados dos Catálogos</CardTitle>
           <CardDescription>
             Todos os itens importados dos catálogos de leilão
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {catalogos.length === 0 ? (
-              <p className="text-muted-foreground">
-                Nenhum catálogo importado ainda
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left p-2">Data Licitação</th>
-                      <th className="text-left p-2">Lote</th>
-                      <th className="text-left p-2">Contrato</th>
-                      <th className="text-left p-2">Descrição</th>
-                      <th className="text-left p-2">Valor</th>
-                      <th className="text-left p-2">Anotações</th>
-                      <th className="text-left p-2">Peso</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {catalogos.map((item) => (
-                      <tr key={item.id} className="border-b hover:bg-muted/50">
-                        <td className="p-2">
-                          {item.dataLicitacao
-                            ? new Date(item.dataLicitacao).toLocaleDateString(
-                                'pt-BR',
-                              )
-                            : 'N/A'}
-                        </td>
-                        <td className="p-2 font-mono">{item.lote}</td>
-                        <td className="p-2 font-mono text-xs">
-                          {item.contrato}
-                        </td>
-                        <td
-                          className="p-2 max-w-md truncate"
-                          title={item.descricao}
-                        >
-                          {item.descricao}
-                        </td>
-                        <td className="p-2">R$ {item.valor}</td>
-                        <td className="p-2 max-w-xs truncate">
-                          {item.anotacoes || '-'}
-                        </td>
-                        <td className="p-2">{item.peso || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+        <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
+          <DataTable
+            columns={columns}
+            data={catalogos}
+            pageCount={Math.ceil(totalCount.count / pageSize)}
+          />
         </CardContent>
       </Card>
     </div>
