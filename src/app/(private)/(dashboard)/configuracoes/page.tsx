@@ -279,74 +279,146 @@ export default async function ConfiguracoesPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex flex-col gap-2">
+    <div className="@container/main flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-2">
+      <div className="flex shrink-0 flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
         <p className="text-muted-foreground">
-          Personalize o sistema de acordo com suas preferências
+          Gerencie configurações do sistema e usuários
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Informações do Sistema</CardTitle>
-            <CardDescription>Nome e logo exibidos no sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SystemInfoEditor
-              systemName={settings.systemName}
-              logoUrl={settings.logoUrl || undefined}
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Cor do Tema</CardTitle>
-            <CardDescription>
-              Escolha a cor principal do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ThemeEditor primaryColor={settings.theme.primaryColor} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pré-visualização do Tema</CardTitle>
-          <CardDescription>
-            Veja as cores geradas automaticamente
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Cores dos Gráficos</h3>
-              <div className="grid gap-3 sm:grid-cols-5">
-                {['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5'].map(
-                  (key) => (
-                    <div key={key} className="flex flex-col gap-2">
-                      <div
-                        className="h-16 rounded-lg border-2 shadow-sm"
-                        style={{
-                          backgroundColor:
-                            settings.theme.colors.light[
-                              key as keyof typeof settings.theme.colors.light
-                            ],
-                        }}
-                      />
-                      <p className="text-xs font-medium text-center">{key}</p>
-                    </div>
-                  ),
-                )}
+      <div className="flex-1 overflow-auto">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                <CardTitle>Permissões</CardTitle>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              <CardDescription>
+                Informações sobre seu nível de acesso
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Seu papel no sistema</p>
+                  <p className="text-sm text-muted-foreground">
+                    Define suas permissões e acessos
+                  </p>
+                </div>
+                <Badge variant={isAdmin ? 'default' : 'outline'}>
+                  {isAdmin ? 'Administrador' : 'Usuário'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {isAdmin && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informações do Sistema</CardTitle>
+                  <CardDescription>
+                    Nome e logo exibidos no sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <SystemInfoEditor
+                    systemName={settings.systemName}
+                    logoUrl={settings.logoUrl || undefined}
+                  />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    <CardTitle>Gestão de Usuários</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Visualize e gerencie todos os usuários do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="rounded-lg border">
+                      <div className="grid grid-cols-4 gap-4 border-b bg-muted/50 p-4 text-sm font-medium">
+                        <div>Nome</div>
+                        <div>Email</div>
+                        <div>Role</div>
+                        <div>Status</div>
+                      </div>
+                      {allUsersWithAccounts.map((u) => (
+                        <div
+                          key={u.id}
+                          className="grid grid-cols-4 gap-4 border-b p-4 text-sm last:border-b-0"
+                        >
+                          <div className="font-medium">{u.name}</div>
+                          <div className="text-muted-foreground">{u.email}</div>
+                          <div>
+                            <Badge
+                              variant={
+                                u.role === 'ADMIN' ? 'default' : 'outline'
+                              }
+                            >
+                              {u.role === 'ADMIN' ? 'Admin' : 'User'}
+                            </Badge>
+                          </div>
+                          <div>
+                            {u.emailVerified ? (
+                              <Badge variant="outline" className="text-chart-3">
+                                Verificado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-chart-4">
+                                Pendente
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Total de {allUsersWithAccounts.length} usuário(s)
+                      registrado(s)
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cor do Tema</CardTitle>
+                  <CardDescription>
+                    Escolha a cor principal do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ThemeEditor primaryColor={settings.theme.primaryColor} />
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {!isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Acesso Limitado</CardTitle>
+                <CardDescription>
+                  Apenas administradores podem acessar configurações avançadas
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Entre em contato com um administrador para solicitar
+                  permissões adicionais ou alterar configurações do sistema.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
