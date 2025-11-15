@@ -1,0 +1,1 @@
+ALTER TABLE "settings" RENAME COLUMN "theme_colors" TO "theme";

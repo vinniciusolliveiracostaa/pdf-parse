@@ -21,11 +21,11 @@ interface LeiloesChartProps {
 const chartConfig = {
   catalogos: {
     label: 'Catálogos',
-    color: 'hsl(var(--chart-1))',
+    color: 'var(--chart-1)',
   },
   relatorios: {
     label: 'Relatórios',
-    color: 'hsl(var(--chart-2))',
+    color: 'var(--chart-2)',
   },
 } satisfies ChartConfig
 

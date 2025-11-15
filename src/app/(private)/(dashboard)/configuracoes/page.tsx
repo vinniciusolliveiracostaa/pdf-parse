@@ -14,8 +14,12 @@ import { db } from '@/db/drizzle'
 import { account } from '@/db/schema/accounts'
 import { user } from '@/db/schema/users'
 import { auth } from '@/lib/auth'
+import { getSettings } from './actions'
 import { ColorPickerCompact } from './color-picker-compact'
+import { SystemInfoEditor } from './system-info-editor'
+import { ThemeEditor } from './theme-editor'
 
+/*
 export default async function ConfiguracoesPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -47,9 +51,7 @@ export default async function ConfiguracoesPage() {
         .orderBy(user.createdAt)
     : []
 
-  const systemSettings = await db.query.settings.findFirst()
-  const currentColor = systemSettings?.primaryColor || '#3b82f6'
-  const _systemName = systemSettings?.systemName || 'Leilão Caixa'
+  const settings = await getSettings()
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-2">
@@ -187,7 +189,7 @@ export default async function ConfiguracoesPage() {
                         Escolha a cor principal que será aplicada em todo o
                         sistema
                       </p>
-                      <ColorPickerCompact currentColor={currentColor} />
+                      <ColorPickerCompact currentColor={settings.theme.primaryColor} />
                     </div>
                   </div>
                 </CardContent>
@@ -213,6 +215,138 @@ export default async function ConfiguracoesPage() {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+*/
+export default async function ConfiguracoesPage() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+
+  if (!session) {
+    redirect('/sign-in')
+  }
+
+  const currentUserAccount = await db.query.account.findFirst({
+    where: (accounts, { eq }) => eq(accounts.userId, session.user.id),
+  })
+
+  const isAdmin = currentUserAccount?.role === 'ADMIN'
+
+  const allUsersWithAccounts = isAdmin
+    ? await db
+        .select({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          emailVerified: user.emailVerified,
+          image: user.image,
+          createdAt: user.createdAt,
+          role: account.role,
+        })
+        .from(user)
+        .leftJoin(account, eq(user.id, account.userId))
+        .orderBy(user.createdAt)
+    : []
+
+  const settings = await getSettings()
+
+  if (!settings.theme || !settings.theme.colors) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuração Inicial Necessária</CardTitle>
+            <CardDescription>
+              Execute as migrations do banco de dados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Parece que a estrutura do banco de dados precisa ser atualizada.
+              </p>
+              <div className="rounded-lg bg-muted p-4 font-mono text-sm">
+                <p>npx drizzle-kit generate</p>
+                <p>npx drizzle-kit migrate</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+        <p className="text-muted-foreground">
+          Personalize o sistema de acordo com suas preferências
+        </p>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações do Sistema</CardTitle>
+            <CardDescription>Nome e logo exibidos no sistema</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SystemInfoEditor
+              systemName={settings.systemName}
+              logoUrl={settings.logoUrl || undefined}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Cor do Tema</CardTitle>
+            <CardDescription>
+              Escolha a cor principal do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeEditor primaryColor={settings.theme.primaryColor} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pré-visualização do Tema</CardTitle>
+          <CardDescription>
+            Veja as cores geradas automaticamente
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-sm font-semibold mb-3">Cores dos Gráficos</h3>
+              <div className="grid gap-3 sm:grid-cols-5">
+                {['chart-1', 'chart-2', 'chart-3', 'chart-4', 'chart-5'].map(
+                  (key) => (
+                    <div key={key} className="flex flex-col gap-2">
+                      <div
+                        className="h-16 rounded-lg border-2 shadow-sm"
+                        style={{
+                          backgroundColor:
+                            settings.theme.colors.light[
+                              key as keyof typeof settings.theme.colors.light
+                            ],
+                        }}
+                      />
+                      <p className="text-xs font-medium text-center">{key}</p>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

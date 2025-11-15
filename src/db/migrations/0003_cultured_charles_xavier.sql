@@ -1,0 +1,2 @@
+ALTER TABLE "settings" ADD COLUMN "theme_colors" jsonb DEFAULT '{"primary":"oklch(0.488 0.243 264.376)","chart-1":"oklch(0.809 0.105 251.813)","chart-2":"oklch(0.623 0.214 259.815)","chart-3":"oklch(0.546 0.245 262.881)","chart-4":"oklch(0.488 0.243 264.376)","chart-5":"oklch(0.424 0.199 265.638)","sidebar-primary":"oklch(0.546 0.245 262.881)"}'::jsonb NOT NULL;--> statement-breakpoint
+ALTER TABLE "settings" DROP COLUMN "primary_color";

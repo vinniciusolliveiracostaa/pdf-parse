@@ -22,23 +22,23 @@ const chartConfig = {
   },
   faixa1: {
     label: 'Faixa 1',
-    color: 'hsl(var(--chart-1))',
+    color: 'var(--chart-1)',
   },
   faixa2: {
     label: 'Faixa 2',
-    color: 'hsl(var(--chart-2))',
+    color: 'var(--chart-2)',
   },
   faixa3: {
     label: 'Faixa 3',
-    color: 'hsl(var(--chart-3))',
+    color: 'var(--chart-3)',
   },
   faixa4: {
     label: 'Faixa 4',
-    color: 'hsl(var(--chart-4))',
+    color: 'var(--chart-4)',
   },
   faixa5: {
     label: 'Faixa 5',
-    color: 'hsl(var(--chart-5))',
+    color: 'var(--chart-5)',
   },
 } satisfies ChartConfig
 

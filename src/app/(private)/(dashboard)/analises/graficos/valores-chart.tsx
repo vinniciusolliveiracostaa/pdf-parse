@@ -22,11 +22,11 @@ interface ValoresChartProps {
 const chartConfig = {
   valorTotal: {
     label: 'Valor Total',
-    color: 'hsl(var(--chart-1))',
+    color: 'var(--chart-1)',
   },
   tarifaTotal: {
     label: 'Tarifas',
-    color: 'hsl(var(--chart-2))',
+    color: 'var(--chart-2)',
   },
 } satisfies ChartConfig
 

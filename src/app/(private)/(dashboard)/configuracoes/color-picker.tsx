@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateThemeColor } from './actions'
+import { updateTheme } from './actions' // 👈 Ação trocada para updateTheme
 
 const presetColors = [
   { name: 'Azul', value: '#3b82f6' },
@@ -24,20 +24,20 @@ interface ColorPickerProps {
 }
 
 export function ColorPicker({ currentColor }: ColorPickerProps) {
-  const [selectedColor, setSelectedColor] = useState(currentColor)
-  const [customColor, setCustomColor] = useState(currentColor)
+  // 👇 Estado simplificado
+  const [color, setColor] = useState(currentColor)
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (color: string) => {
+  // 👇 Lógica de salvar do ThemeEditor
+  const handleSave = async () => {
     setLoading(true)
-
-    const result = await updateThemeColor(color)
+    const result = await updateTheme(color) // Usa o estado 'color'
 
     if (result.success) {
-      toast.success('Cor atualizada com sucesso!')
-      setSelectedColor(color)
+      toast.success('Tema atualizado com sucesso!')
+      setTimeout(() => window.location.reload(), 500) // 👈 Recarrega
     } else {
-      toast.error(result.error || 'Erro ao atualizar cor')
+      toast.error(result.error || 'Erro ao salvar tema') // 👈 Mensagem padronizada
     }
 
     setLoading(false)
@@ -50,21 +50,21 @@ export function ColorPicker({ currentColor }: ColorPickerProps) {
           Cores predefinidas
         </Label>
         <div className="grid grid-cols-4 gap-3 @md/main:grid-cols-8">
-          {presetColors.map((color) => (
+          {presetColors.map((preset) => (
             <button
-              key={color.value}
+              key={preset.value}
               disabled={loading}
-              onClick={() => handleSubmit(color.value)}
+              onClick={() => setColor(preset.value)} // 👈 Só muda o estado
               className="group relative h-12 w-12 rounded-md border-2 transition-all hover:scale-110 disabled:cursor-not-allowed disabled:opacity-50"
               style={{
-                backgroundColor: color.value,
+                backgroundColor: preset.value,
                 borderColor:
-                  selectedColor === color.value ? color.value : 'transparent',
+                  color === preset.value ? preset.value : 'transparent', // 👈 Usa 'color'
               }}
               type="button"
-              title={color.name}
+              title={preset.name}
             >
-              {selectedColor === color.value && (
+              {color === preset.value && ( // 👈 Usa 'color'
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Check className="h-5 w-5 text-white drop-shadow-lg" />
                 </div>
@@ -82,22 +82,22 @@ export function ColorPicker({ currentColor }: ColorPickerProps) {
           <Input
             id="custom-color"
             type="color"
-            value={customColor}
-            onChange={(e) => setCustomColor(e.target.value)}
+            value={color} // 👈 Usa 'color'
+            onChange={(e) => setColor(e.target.value)} // 👈 Usa 'setColor'
             className="h-10 w-20 cursor-pointer"
             disabled={loading}
           />
           <Input
             type="text"
-            value={customColor}
-            onChange={(e) => setCustomColor(e.target.value)}
+            value={color} // 👈 Usa 'color'
+            onChange={(e) => setColor(e.target.value)} // 👈 Usa 'setColor'
             placeholder="#3b82f6"
             className="flex-1 font-mono"
             disabled={loading}
           />
           <Button
-            onClick={() => handleSubmit(customColor)}
-            disabled={loading || customColor === selectedColor}
+            onClick={handleSave} // 👈 Chama handleSave
+            disabled={loading} // 👈 Desabilitado só com loading
             size="sm"
           >
             {loading ? (
