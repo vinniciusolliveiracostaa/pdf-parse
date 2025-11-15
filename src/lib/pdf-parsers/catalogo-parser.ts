@@ -21,6 +21,13 @@ export function extractPeso(descricao: string): string | undefined {
 }
 
 /**
+ * Remove R$ e espaços dos valores antes de salvar no banco
+ */
+function cleanValor(valor: string): string {
+  return valor.replace(/R\$\s*/g, '').trim()
+}
+
+/**
  * Parser linha por linha para catálogo
  */
 function parsePdfContent(rawText: string): CatalogoData[] {
@@ -191,7 +198,7 @@ export async function saveCatalogoToDb(
     lote: item.LOTE,
     contrato: item.CONTRATO,
     descricao: item.DESCRIÇÃO,
-    valor: item.VALOR,
+    valor: cleanValor(item.VALOR),
     anotacoes: item.ANOTAÇÕES || null,
     peso: item.PESO || null,
   }))

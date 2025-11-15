@@ -1,8 +1,8 @@
 'use client'
 
-import { Search } from 'lucide-react'
+import { AlertCircle, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Card,
   CardContent,
@@ -13,18 +13,12 @@ import {
 import { Input } from '@/components/ui/input'
 
 interface Lote {
-  tipo: string
   numeroLote: string
-  numeroContrato: string | null
-  descricao: string | null
-  valor: string | null
+  numeroContrato: string
+  descricao: string
   peso: string | null
-  anotacoes: string | null
   dataLeilao: string
-  valorLance: string | null
-  tarifa: string | null
-  total: string | null
-  cpfCnpj: string | null
+  valorTotal: string | null
 }
 
 interface BuscaLoteClientProps {
@@ -52,23 +46,50 @@ export function BuscaLoteClient({ lotes }: BuscaLoteClientProps) {
     )
   }
 
-  const calcularValorPorGrama = (lote: Lote): string | null => {
-    if (!lote.valor || !lote.peso) return null
+  const calcularValorPorGrama = (
+    lote: Lote,
+  ): { valorPorGrama: string; pesoGramas: number } | null => {
+    // Valor total vem do relatório, peso vem do catálogo
+    if (!lote.valorTotal || !lote.peso) return null
 
-    const pesoMatch = lote.peso.match(/(\d+(?:,\d+)?)\s*g/)
-    if (!pesoMatch) return null
+    // Formatos aceitos: XXX,XXG, XX,XXG, XXX,XX G, XX,XX G, X,XXG, X,XX G
+    // Regex: captura números com vírgula seguidos de G (com ou sem espaço)
+    const pesoMatch = lote.peso.match(/(\d{1,3},\d{2})\s*G/i)
+    if (!pesoMatch) {
+      console.log('❌ Peso não match:', lote.peso)
+      return null
+    }
 
     const pesoGramas = parseFloat(pesoMatch[1].replace(',', '.'))
-    if (pesoGramas === 0) return null
+    if (pesoGramas === 0 || Number.isNaN(pesoGramas)) {
+      console.log('❌ Peso inválido após parse:', pesoGramas)
+      return null
+    }
 
-    const valorNumerico = parseValor(lote.valor)
+    const valorNumerico = parseValor(lote.valorTotal)
+    if (Number.isNaN(valorNumerico)) {
+      console.log('❌ Valor inválido:', lote.valorTotal)
+      return null
+    }
+
     const valorPorGrama = valorNumerico / pesoGramas
 
-    return valorPorGrama.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
+    console.log('✅ Cálculo OK:', {
+      peso: lote.peso,
+      pesoGramas,
+      valorTotal: lote.valorTotal,
+      valorNumerico,
+      valorPorGrama,
     })
+
+    return {
+      valorPorGrama: valorPorGrama.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+      }),
+      pesoGramas,
+    }
   }
 
   return (
@@ -77,7 +98,7 @@ export function BuscaLoteClient({ lotes }: BuscaLoteClientProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
-            Pesquisar
+            Pesquisar Lotes
           </CardTitle>
           <CardDescription>
             {lotesFiltrados.length} de {lotes.length} lotes encontrados
@@ -85,7 +106,7 @@ export function BuscaLoteClient({ lotes }: BuscaLoteClientProps) {
         </CardHeader>
         <CardContent>
           <Input
-            placeholder="Digite o número do lote ou descrição..."
+            placeholder="Digite o número do lote, contrato ou descrição..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full"
@@ -97,7 +118,8 @@ export function BuscaLoteClient({ lotes }: BuscaLoteClientProps) {
         <CardHeader className="shrink-0">
           <CardTitle>Resultados</CardTitle>
           <CardDescription>
-            Todos os lotes cadastrados no sistema
+            Catálogos com cálculo de valor por grama (quando disponível
+            relatório)
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto">
@@ -106,127 +128,85 @@ export function BuscaLoteClient({ lotes }: BuscaLoteClientProps) {
               {searchTerm ? 'Nenhum lote encontrado' : 'Nenhum lote cadastrado'}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {lotesFiltrados.map((lote, idx) => {
-                const valorPorGrama = calcularValorPorGrama(lote)
+                const calculo = calcularValorPorGrama(lote)
+                const temRelatorio = !!lote.valorTotal
+
                 return (
-                  <Card key={`${lote.tipo}-${lote.numeroLote}-${idx}`}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <CardTitle className="text-lg">
-                              Lote {lote.numeroLote}
-                            </CardTitle>
-                            <Badge
-                              variant={
-                                lote.tipo === 'catalogo'
-                                  ? 'default'
-                                  : 'secondary'
-                              }
-                            >
-                              {lote.tipo === 'catalogo'
-                                ? 'Catálogo'
-                                : 'Relatório'}
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            {new Date(lote.dataLeilao).toLocaleDateString(
-                              'pt-BR',
-                            )}
-                          </CardDescription>
+                  <Card key={`${lote.numeroLote}-${idx}`}>
+                    <CardContent className="p-4">
+                      {/* Header: Lote e Data */}
+                      <div className="mb-3 flex items-start justify-between">
+                        <div>
+                          <p className="text-lg font-bold">
+                            Lote {lote.numeroLote}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Contrato: {lote.numeroContrato}
+                          </p>
                         </div>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(lote.dataLeilao).toLocaleDateString(
+                            'pt-BR',
+                          )}
+                        </p>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-3 @md/main:grid-cols-2">
-                        {lote.numeroContrato && (
+
+                      {/* Descrição no centro */}
+                      <div className="mb-4 rounded-md bg-muted/50 p-3">
+                        <p className="text-sm">{lote.descricao}</p>
+                      </div>
+
+                      {/* Footer: Valores */}
+                      {!temRelatorio ? (
+                        <Alert
+                          variant="destructive"
+                          className="flex items-center gap-2 py-2"
+                        >
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          <AlertDescription className="text-xs">
+                            Relatório indisponível para cálculo
+                          </AlertDescription>
+                        </Alert>
+                      ) : !calculo ? (
+                        <Alert className="flex items-center gap-2 py-2">
+                          <AlertCircle className="h-4 w-4 shrink-0" />
+                          <AlertDescription className="text-xs">
+                            Peso inválido - não é possível calcular R$/g
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* Valor Total (esquerda) */}
                           <div>
-                            <p className="text-sm text-muted-foreground">
-                              Contrato
+                            <p className="text-xs text-muted-foreground">
+                              Valor Total
                             </p>
-                            <p className="font-semibold">
-                              {lote.numeroContrato}
-                            </p>
+                            <p className="font-semibold">{lote.valorTotal}</p>
                           </div>
-                        )}
-                        {lote.descricao && (
-                          <div className="@md/main:col-span-2">
-                            <p className="text-sm text-muted-foreground">
-                              Descrição
-                            </p>
-                            <p className="font-semibold">{lote.descricao}</p>
-                          </div>
-                        )}
-                        {lote.valor && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Valor
-                            </p>
-                            <p className="font-semibold">{lote.valor}</p>
-                          </div>
-                        )}
-                        {lote.peso && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
+
+                          {/* Peso (centro) */}
+                          <div className="text-center">
+                            <p className="text-xs text-muted-foreground">
                               Peso
                             </p>
-                            <p className="font-semibold">{lote.peso}</p>
-                          </div>
-                        )}
-                        {valorPorGrama && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Valor por Grama
-                            </p>
-                            <p className="font-semibold text-primary">
-                              {valorPorGrama}
+                            <p className="font-semibold">
+                              {lote.peso || 'N/A'}
                             </p>
                           </div>
-                        )}
-                        {lote.valorLance && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Valor Lance
+
+                          {/* Valor por Grama (direita) */}
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground">
+                              R$ por Grama
                             </p>
-                            <p className="font-semibold">{lote.valorLance}</p>
-                          </div>
-                        )}
-                        {lote.tarifa && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Tarifa
-                            </p>
-                            <p className="font-semibold">{lote.tarifa}</p>
-                          </div>
-                        )}
-                        {lote.total && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Total
-                            </p>
-                            <p className="font-semibold text-primary">
-                              {lote.total}
+                            <p className="font-bold text-primary">
+                              {calculo.valorPorGrama}
                             </p>
                           </div>
-                        )}
-                        {lote.cpfCnpj && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              CPF/CNPJ
-                            </p>
-                            <p className="font-mono text-sm">{lote.cpfCnpj}</p>
-                          </div>
-                        )}
-                        {lote.anotacoes && (
-                          <div className="@md/main:col-span-2">
-                            <p className="text-sm text-muted-foreground">
-                              Anotações
-                            </p>
-                            <p className="text-sm">{lote.anotacoes}</p>
-                          </div>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )

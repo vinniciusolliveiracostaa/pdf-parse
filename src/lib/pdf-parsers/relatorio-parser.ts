@@ -18,6 +18,13 @@ function formatCpfCnpj(cpfCnpj: string): string {
 }
 
 /**
+ * Remove R$ e espaços dos valores antes de salvar no banco
+ */
+function cleanValor(valor: string): string {
+  return valor.replace(/R\$\s*/g, '').trim()
+}
+
+/**
  * Parser 1: Linha por linha para relatório (Fallback)
  */
 function parseRelatorioContent(rawText: string): RelatorioData[] {
@@ -222,9 +229,9 @@ export async function saveRelatorioToDb(
     leilaoId,
     cpfCnpj: item.CPF_CNPJ || null,
     numeroLote: item.NUMERO_LOTE,
-    valorLance: item.VALOR_LANCE,
-    tarifa: item.TARIFA,
-    total: item.TOTAL,
+    valorLance: cleanValor(item.VALOR_LANCE),
+    tarifa: cleanValor(item.TARIFA),
+    total: cleanValor(item.TOTAL),
   }))
 
   await db.insert(relatorio).values(records)

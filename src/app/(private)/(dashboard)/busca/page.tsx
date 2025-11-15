@@ -15,49 +15,36 @@ export default async function BuscaPage() {
     redirect('/sign-in')
   }
 
+  // Buscar todos os catálogos com seus relatórios correspondentes
   const catalogosData = await db
-    .select()
+    .select({
+      lote: catalogo.lote,
+      contrato: catalogo.contrato,
+      descricao: catalogo.descricao,
+      peso: catalogo.peso,
+      anotacoes: catalogo.anotacoes,
+      dataLeilao: leilao.dataLicitacao,
+      // Buscar relatório correspondente
+      valorRelatorio: sql<string>`(
+        SELECT ${relatorio.total}
+        FROM ${relatorio}
+        WHERE ${relatorio.numeroLote} = ${catalogo.lote}
+          AND ${relatorio.leilaoId} = ${catalogo.leilaoId}
+        LIMIT 1
+      )`,
+    })
     .from(catalogo)
     .innerJoin(leilao, sql`${catalogo.leilaoId} = ${leilao.id}`)
     .limit(500)
 
-  const relatoriosData = await db
-    .select()
-    .from(relatorio)
-    .innerJoin(leilao, sql`${relatorio.leilaoId} = ${leilao.id}`)
-    .limit(500)
-
-  const todosCatalogos = catalogosData.map((item) => ({
-    tipo: 'catalogo' as const,
-    numeroLote: item.catalogo.lote,
-    numeroContrato: item.catalogo.contrato,
-    descricao: item.catalogo.descricao,
-    valor: item.catalogo.valor,
-    peso: item.catalogo.peso,
-    anotacoes: item.catalogo.anotacoes,
-    dataLeilao: item.leilao.dataLicitacao,
-    valorLance: null,
-    tarifa: null,
-    total: null,
-    cpfCnpj: null,
+  const todosLotes = catalogosData.map((item) => ({
+    numeroLote: item.lote,
+    numeroContrato: item.contrato,
+    descricao: item.descricao,
+    peso: item.peso,
+    dataLeilao: item.dataLeilao,
+    valorTotal: item.valorRelatorio,
   }))
-
-  const todosRelatorios = relatoriosData.map((item) => ({
-    tipo: 'relatorio' as const,
-    numeroLote: item.relatorio.numeroLote,
-    numeroContrato: null,
-    descricao: null,
-    valor: null,
-    peso: null,
-    anotacoes: null,
-    dataLeilao: item.leilao.dataLicitacao,
-    valorLance: item.relatorio.valorLance,
-    tarifa: item.relatorio.tarifa,
-    total: item.relatorio.total,
-    cpfCnpj: item.relatorio.cpfCnpj,
-  }))
-
-  const todosLotes = [...todosCatalogos, ...todosRelatorios]
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 overflow-hidden p-4 pt-2">
